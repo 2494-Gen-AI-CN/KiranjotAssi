@@ -205,7 +205,7 @@ def solve_timeline(found_clues, solved):
 
     if answer == CULPRIT:
         print("\nCorrect Deduction! Thomas' denial conflicts with "
-              "Daniel's accoubt, and the note gives a possible motive. ")
+              "Daniel's account, and the note gives a possible motive. ")
         return True
     print("That deduction doesn't seem to fit the evidence yet. ")
     return solved
