@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import logging 
 import re
 from desk import NOW, Desk
+from storage import append_line, export_board, read_lines, delete_file
+import time
 
 SLA_HOURS = {"high": 4, "normal": 24, "low": 72}
 NOW = datetime(2026, 10, 19, 14, 0)
@@ -16,6 +18,9 @@ logging.basicConfig(level=logging.WARNING, format ="%(levelname)s %(name)s: %(me
 
 class Ticket:
     def __init__(self, ticket_id, title, priority, opened_at = datetime.now ):
+        if priority not in SLA_HOURS:
+            #Try to use the built in errors, otherwise you can use the error base class to format your own
+            raise ValueError(f"unknown priority: {priority!r}") #the !r will print 'wrong' instead of wrong without the quotes
         self.ticket_id = ticket_id
         self.title = title
         self.priority = priority
@@ -72,10 +77,36 @@ def main():
 
     desk = Desk()
 
+    try: 
+        #this contains the code that may generate an exception
+        extra = Ticket(7, "Refund charged twice", "urgent", NOW)
+    except ValueError as err:
+        #What to do if we trigger an exception
+        log.error("rejected ticket: %s", err)
+    except KeyError as err:
+        log.error("somehow got a key error")
+    else:
+        # in Python, we can add an else block - this triggers when the try 
+        # doesn't generate an exception
+        desk.add(extra)
+    finally: 
+        # regardless of if an exception was raised in the try, the presence of an else, wtc.
+        # this code always runs
+        log.info("intake done")
+
     for t in tickets:
         print(t.ticket_id, t.priority, t.status, t.days_open())
         desk.add(t) #Add ticket to my desk
 
+#Intentionally create a bad ticket
+#t_bad = Ticket(1, "Login Page returns 500", "High", NOW - timedelta(hours = 30))
+
+    export_board(desk, "board.txt")
+    append_line("board.txt", "end of shift")
+
+    time.sleep(5)
+
+    delete_file("board.txt")
 
 if __name__ =="__main__":
     main()
