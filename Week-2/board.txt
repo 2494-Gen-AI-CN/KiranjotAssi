@@ -1,5 +1,0 @@
-1	Login Page returns 500	high	closed
-1	Login Page returns 500	high	closed
-4	Typo on pricing page	normal	closed
-3	Add dark mode	low	assign
-end of shift
