@@ -1,0 +1,56 @@
+[
+  {
+    "ticket_id": 1,
+    "title": "Login page returns 500",
+    "priority": "high",
+    "status": "closed",
+    "assignee": null,
+    "opened_at": "2026-10-18T08:00:00",
+    "closed_at": "2026-10-18T11:00:00"
+  },
+  {
+    "ticket_id": 2,
+    "title": "Invoice PDF is blank",
+    "priority": "normal",
+    "status": "closed",
+    "assignee": null,
+    "opened_at": "2026-10-17T12:00:00",
+    "closed_at": "2026-10-18T18:00:00"
+  },
+  {
+    "ticket_id": 3,
+    "title": "Typo on pricing page",
+    "priority": "normal",
+    "status": "closed",
+    "assignee": null,
+    "opened_at": "2026-10-18T18:00:00",
+    "closed_at": "2026-10-19T04:00:00"
+  },
+  {
+    "ticket_id": 4,
+    "title": "Checkout button frozen",
+    "priority": "high",
+    "status": "assigned",
+    "assignee": "Priya",
+    "opened_at": "2026-10-19T08:00:00",
+    "closed_at": null
+  },
+  {
+    "ticket_id": 5,
+    "title": "Export is missing rows",
+    "priority": "normal",
+    "status": "assigned",
+    "assignee": "Marco",
+    "opened_at": "2026-10-18T12:00:00",
+    "closed_at": null
+  },
+  {
+    "ticket_id": 6,
+    "title": "Add dark mode",
+    "priority": "low",
+    "status": "open",
+    "assignee": null,
+    "opened_at": "2026-10-19T12:00:00",
+    "closed_at": null
+  }
+]
