@@ -5,73 +5,74 @@ from dataset import get_car_dataset_file_path, get_ev_market_dataset_file_path
 ev_dataset = pd.read_csv(get_ev_market_dataset_file_path())
 car_dataset = pd.read_csv(get_car_dataset_file_path())
 
-
-# stage 1: Purchase (K)
+#Stage 1: purchase (K)
 def purchase(car_dataset, ev_dataset):
-    """Compare similar EVs and conventional cars to reveal the upfront price difference."""
-    cleaned_ev_dataset = ev_dataset[["brand", "model", "year", "price_usd"]]
-    cleaned_car_dataset = car_dataset[["make", "model", "model_year", "original_price"]]
-    # Compare conventional cars with EV cars
-    #this one compares Tesla Model Y with Toyota RAV4, Honda CR-V, Ford Escape
-    tesla_value_comparsion = cleaned_ev_dataset[
-        (cleaned_ev_dataset["brand"] == "Tesla") & 
-        (cleaned_ev_dataset["model"] == "Model Y") & 
-        (cleaned_ev_dataset["year"] == 2022)
-        ]
-    model_y_comparision = cleaned_car_dataset[
-        (cleaned_car_dataset["make"].isin(["Toyota", "Honda", "Ford"])) & 
-        (cleaned_car_dataset["model"].isin(["RAV4", "CR-V", "Escape"]))&
-        (cleaned_car_dataset["model_year"].isin([2022]))
-        ]
+    ev = ev_dataset[["brand", "model", "year", "price_usd"]]
+    cars = car_dataset[["make", "model", "model_year", "original_price"]]
 
-    #This example compares Hyundai Ioniq 5 with Hyundai Tucson
-    ioniq5_value_comparsion = cleaned_ev_dataset[
-        (cleaned_ev_dataset["brand"] == "Hyundai") & 
-        (cleaned_ev_dataset["model"] == "Ioniq 5") &
-        (cleaned_ev_dataset["year"] == 2023)
-        ]
-    hyundai_tucson_comparision = cleaned_car_dataset[
-        (cleaned_car_dataset["make"].isin(["Hyundai"])) & 
-        (cleaned_car_dataset["model"].isin(["Tucson"])) &
-        (cleaned_car_dataset["model_year"].isin([2023]))
-        ]
+    comparisons = {}
 
-    #This example compares Kia EV6 with Kia Sportage
-    ev6_value_comparsion = cleaned_ev_dataset[
-        (cleaned_ev_dataset["brand"] == "Kia") & 
-        (cleaned_ev_dataset["model"] == "EV 6") &
-        (cleaned_ev_dataset["year"] == 2024)
-        ]
-    kia_sportage_comparision = cleaned_car_dataset[
-        (cleaned_car_dataset["make"].isin(["Kia"])) & 
-        (cleaned_car_dataset["model"].isin(["Sportage"])) &
-        (cleaned_car_dataset["model_year"].isin([2024]))
-        ]
+    ev_rows = ev[
+        (ev["brand"] == "Tesla")
+        & (ev["model"] == "Model Y")
+        & (ev["year"] == 2022)
+    ]
+    car_rows = cars[
+        (cars["make"].isin(["Toyota", "Honda", "Ford"]))
+        & (cars["model"].isin(["RAV4", "CR-V", "Escape"]))
+        & (cars["model_year"] == 2022)
+    ]
+    comparisons["Model Y"] = (ev_rows, car_rows)
 
-    #This example compares Volkswagen id4 with Volkswagen Tiguan
-    id4_value_comparsion = cleaned_ev_dataset[
-        (cleaned_ev_dataset["brand"] == "Volkswagen") & 
-        (cleaned_ev_dataset["model"] == "ID.4") &
-        (cleaned_ev_dataset["year"] == 2025)
-        ]
-    tiguan_comparision = cleaned_car_dataset[
-        (cleaned_car_dataset["make"].isin(["Volkswagen"])) & 
-        (cleaned_car_dataset["model"].isin(["Tiguan"])) & 
-        (cleaned_car_dataset["model_year"].isin([2025]))
-        ]
+    ev_rows = ev[
+        (ev["brand"] == "Hyundai")
+        & (ev["model"] == "Ioniq 5")
+        & (ev["year"] == 2023)
+    ]
+    car_rows = cars[
+        (cars["make"] == "Hyundai")
+        & (cars["model"] == "Tucson")
+        & (cars["model_year"] == 2023)
+    ]
+    comparisons["IONIQ 5"] = (ev_rows, car_rows)
 
-    #This example compares Mercedes EQE/EQS with Mercedes e-class/s-class
-    eqe_eqs_value_comparsion = cleaned_ev_dataset[
-        (cleaned_ev_dataset["brand"] == "Mercedes") & 
-        (cleaned_ev_dataset["model"].isin(["EQE", "EQS"])) & 
-        (cleaned_ev_dataset["year"].isin([2024]))
-        ]
-    sclass_eclass_comparision = cleaned_car_dataset[
-        (cleaned_car_dataset["make"].isin(["Mercedes-Benz"])) & 
-        (cleaned_car_dataset["model"].isin(["C-Class", "E-Class"])) & 
-        (cleaned_car_dataset["model_year"].isin([2024]))
-        ]
-    return None
+    ev_rows = ev[
+        (ev["brand"] == "Kia")
+        & (ev["model"].isin(["EV6", "EV 6"]))
+        & (ev["year"] == 2024)
+    ]
+    car_rows = cars[
+        (cars["make"] == "Kia")
+        & (cars["model"] == "Sportage")
+        & (cars["model_year"] == 2024)
+    ]
+    comparisons["Kia EV6"] = (ev_rows, car_rows)
+
+    ev_rows = ev[
+        (ev["brand"] == "Volkswagen")
+        & (ev["model"] == "ID.4")
+        & (ev["year"] == 2025)
+    ]
+    car_rows = cars[
+        (cars["make"] == "Volkswagen")
+        & (cars["model"] == "Tiguan")
+        & (cars["model_year"] == 2025)
+    ]
+    comparisons["Volkswagen ID.4"] = (ev_rows, car_rows)
+
+    ev_rows = ev[
+        (ev["brand"] == "Mercedes")
+        & (ev["model"].isin(["EQE", "EQS"]))
+        & (ev["year"] == 2024)
+    ]
+    car_rows = cars[
+        (cars["make"] == "Mercedes-Benz")
+        & (cars["model"].isin(["E-Class", "S-Class"]))
+        & (cars["model_year"] == 2024)
+    ]
+    comparisons["Mercedes EQE/EQS"] = (ev_rows, car_rows)
+
+    return comparisons
 
 # stage 2: Vlaue (A)
 def value():
@@ -81,20 +82,60 @@ def value():
 
 # stage 3: Driving (K)
 def driving(car_dataset, ev_dataset):
-    """Estimate the driving distance needed for energy savings to recover the EV’s upfront premium."""
-    FUEL_COST = 1.73
-    ELECTRICTY_COST = 0.166
-    ev_dataset = ev_dataset[["brand", "model", "year","price_usd"]]
-    car_dataset = car_dataset[["make", "model","model_year", "original_price", "fuel_consumption_combined_l_100km"]]
-    car_dataset = car_dataset[(car_dataset["make"].isin(["Mercedes-Benz"])) &
-                              car_dataset["model"].isin(["E-Class"]) &
-                              car_dataset["model_year"].isin([2024])]
-    ev_dataset = ev_dataset[(ev_dataset["brand"].isin(["Mercedes"])) &
-                            ev_dataset["model"].isin(["EQE"]) & 
-                            ev_dataset["year"].isin([2024])]
-    break_even_distance = ((ev_dataset["price_usd"]) - (car_dataset["original_price"]).mean()) / (FUEL_COST - ELECTRICTY_COST)
-    print(break_even_distance)
-    return None
+    """Estimate the distance needed for energy savings to recover the EV premium."""
+    fuel_cost = 1.73
+    electricity_cost = 0.166
+
+    cars = car_dataset[
+        ["make", "model", "model_year", "original_price",
+         "fuel_consumption_combined_l_100km"]
+    ]
+
+    evs = ev_dataset[
+        ["brand", "model", "year", "price_usd",
+         "battery_capacity_kwh", "range_miles"]
+    ]
+
+    car = cars[
+        (cars["make"] == "Mercedes-Benz")
+        & (cars["model"] == "E-Class")
+        & (cars["model_year"] == 2024)
+    ]
+
+    ev = evs[
+        (evs["brand"] == "Mercedes")
+        & (evs["model"] == "EQE")
+        & (evs["year"] == 2024)
+    ]
+
+    if ev.empty or car.empty:
+        raise ValueError("No matching EQE or E-Class rows found.")
+
+    ev_price = ev["price_usd"].median()
+    car_price = car["original_price"].median()
+
+    # Estimate EV kWh per 100 km from battery capacity and range
+    ev_kwh_per_100km = (
+        ev["battery_capacity_kwh"] / ev["range_miles"] * 62.137
+    ).median()
+
+    car_l_per_100km = car["fuel_consumption_combined_l_100km"].median()
+
+    ev_cost_per_km = ev_kwh_per_100km / 100 * electricity_cost
+    car_cost_per_km = car_l_per_100km / 100 * fuel_cost
+
+    savings_per_km = car_cost_per_km - ev_cost_per_km
+    premium = ev_price - car_price
+
+    break_even_km = premium / savings_per_km if savings_per_km > 0 else None
+
+    return {
+        "ev_price": ev_price,
+        "car_price": car_price,
+        "ev_cost_per_km": ev_cost_per_km,
+        "car_cost_per_km": car_cost_per_km,
+        "break_even_km": break_even_km,
+    }
 
 # stage 4: Convenience (A)
 def convenience():
