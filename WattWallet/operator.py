@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+from dataset import get_car_dataset_file_path, get_ev_market_dataset_file_path
 
 # stage 1: Purchase (K)
 def purchase():
