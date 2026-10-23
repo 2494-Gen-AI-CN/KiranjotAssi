@@ -2,6 +2,12 @@ import pandas as pd
 import numpy as np
 from dataset import get_car_dataset_file_path, get_ev_market_dataset_file_path
 
+ev_dataset = pd.read_csv(get_ev_market_dataset_file_path)
+car_dataset = pd.read_csv(get_car_dataset_file_path)
+
+ev_dataset.head(10)
+
+
 # stage 1: Purchase (K)
 def purchase():
     """Compare similar EVs and conventional cars to reveal the upfront price difference."""
