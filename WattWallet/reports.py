@@ -93,10 +93,9 @@ def driving(car_dataset, ev_dataset):
                             ev_dataset["model"].isin(["EQE"]) & 
                             ev_dataset["year"].isin([2024])]
     break_even_distance = ((ev_dataset["price_usd"]) - (car_dataset["original_price"]).mean()) / (FUEL_COST - ELECTRICTY_COST)
-
     print(break_even_distance)
     return None
-driving(car_dataset, ev_dataset)
+
 # stage 4: Convenience (A)
 def convenience():
     """Compare trip spending and travel time, including charging stops and detours."""
@@ -104,8 +103,16 @@ def convenience():
     return None
 
 # stage 5: Resale (K)
-def resale():
+def resale(car_dataset):
     """Explore potential sale proceeds and how retained value affects long-term ownership costs."""
+    car_dataset = car_dataset[["make", "model", "odometer_km", "model_year", "vehicle_age", "estimated_resale_value", "original_price", "ev_flag"]]
+    car_dataset = car_dataset[(car_dataset["make"].isin(["Hyundai"])) &
+                              car_dataset["model"].isin(["Tucson", "Ioniq 5"]) &
+                              car_dataset["model_year"].isin([2021])
+                              ].dropna()
+    retained_value_percent = (car_dataset["estimated_resale_value"] / car_dataset["original_price"] * 100)
+    depreciation_cost = (car_dataset["original_price"] - car_dataset["estimated_resale_value"])
+    print(retained_value_percent, depreciation_cost)
 
     return None
 
