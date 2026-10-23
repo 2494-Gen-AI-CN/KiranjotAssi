@@ -12,6 +12,7 @@ def purchase(car_dataset, ev_dataset):
 
     comparisons = {}
 
+    #Filtering out examples of similar vehicles in both datasets to plot
     ev_rows = ev[
         (ev["brand"] == "Tesla")
         & (ev["model"] == "Model Y")
@@ -74,7 +75,7 @@ def purchase(car_dataset, ev_dataset):
 
     return comparisons
 
-# stage 2: Vlaue (A)
+# stage 2: Value (A)
 def value():
     """Explore how much extra range or performance you receive as your budget increases."""
 
@@ -146,16 +147,20 @@ def convenience():
 # stage 5: Resale (K)
 def resale(car_dataset):
     """Explore potential sale proceeds and how retained value affects long-term ownership costs."""
-    car_dataset = car_dataset[["make", "model", "odometer_km", "model_year", "vehicle_age", "estimated_resale_value", "original_price", "ev_flag"]]
+    car_dataset = car_dataset[["make", "model", "odometer_km", "model_year", "vehicle_age", "estimated_resale_value", "original_price"]]
     car_dataset = car_dataset[(car_dataset["make"].isin(["Hyundai"])) &
                               car_dataset["model"].isin(["Tucson", "Ioniq 5"]) &
                               car_dataset["model_year"].isin([2021])
-                              ].dropna()
-    retained_value_percent = (car_dataset["estimated_resale_value"] / car_dataset["original_price"] * 100)
-    depreciation_cost = (car_dataset["original_price"] - car_dataset["estimated_resale_value"])
-    print(retained_value_percent, depreciation_cost)
-
-    return None
+                              ].dropna().copy()
+    car_dataset["retained_value_percent"] = (
+        car_dataset["estimated_resale_value"]
+        / car_dataset["original_price"] * 100
+    )
+    car_dataset["depreciation_cost"] = (
+        car_dataset["original_price"]
+        - car_dataset["estimated_resale_value"]
+    )
+    return car_dataset
 
 # stage 6: Ownership Verdict (A)
 def ownership_verdict():

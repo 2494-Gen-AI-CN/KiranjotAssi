@@ -7,6 +7,9 @@ from dataset import get_car_dataset_file_path, get_ev_market_dataset_file_path
 ev_dataset = pd.read_csv(get_ev_market_dataset_file_path())
 car_dataset = pd.read_csv(get_car_dataset_file_path())
 
+PINK = "#E75480"
+PURPLE = "#8A2BE2"
+
 #Stage 1: Purchase comparison (K)
 def plot_purchase_comparison(comparisons):
     labels, ev_medians, car_medians = [], [], []
@@ -23,8 +26,8 @@ def plot_purchase_comparison(comparisons):
     width = 0.38
 
     fig,ax = plt.subplots(figsize=(11,6))
-    ax.bar(x-width/2,ev_medians, width, label="EV Price")
-    ax.bar(x-width/2, car_medians, width, label="Conventional car Price")
+    ax.bar(x-width/2,ev_medians, width, label="EV Price", color=PURPLE)
+    ax.bar(x-width/2, car_medians, width, label="Conventional car Price", color=PINK)
 
     ax.set_xticks(x,labels, rotation=20, ha="right")
     ax.set_ylabel("Median recorded price")
@@ -37,6 +40,7 @@ def plot_purchase_comparison(comparisons):
     for label, (ev_rows, car_rows) in comparisons.items():
         print(f"{label}: EV rows={len(ev_rows)}, conventional rows={len(car_rows)}")
 
+#Stage 3: Driving (K)
 def plot_driving_comparison(car_dataset, ev_dataset):
     result = driving(car_dataset, ev_dataset)
 
@@ -51,8 +55,8 @@ def plot_driving_comparison(car_dataset, ev_dataset):
     car_total = result["car_price"] + distance * result["car_cost_per_km"]
 
     plt.figure(figsize=(9,5))
-    plt.plot(distance, ev_total, label="EQE: purchase + electricity")
-    plt.plot(distance, car_total, label="E-Class: purchase + gasoline")
+    plt.plot(distance, ev_total, label="EQE: purchase + electricity", color=PURPLE)
+    plt.plot(distance, car_total, label="E-Class: purchase + gasoline", color=PINK)
     plt.axvline(
         result["break_even_km"],
         color="gray",
@@ -68,6 +72,47 @@ def plot_driving_comparison(car_dataset, ev_dataset):
     plt.tight_layout()
     plt.show()
 
-plot_driving_comparison(car_dataset, ev_dataset)
+#Stage 5: Resale (K)
+def plot_resale_comparison(car_dataset):
+    data = resale(car_dataset)
+
+    if data.empty:
+        print("no matching Hyundai rows found.")
+        return
+
+    models = ["Tucson", "Ioniq 5"]
+    values = [
+        data.loc[
+            data["model"] == model, "retained_value_percent"
+        ].dropna()
+        for model in models
+    ]
+
+    colors = {"Tucson": PINK, "Ioniq 5": PURPLE}
+
+    fig, ax = plt.subplots(figsize=(9,6))
+    for model, rows in data.groupby("model"):
+        ax.scatter(
+        rows["odometer_km"],
+        rows["retained_value_percent"],
+        label=model,
+        color=colors.get(model, "gray"),
+        alpha=0.4,
+        s=18,
+    )
+
+    ax.set_title("2021 Hyundai Retained Value vs Mileage")
+    ax.set_xlabel("Odometer (km)")
+    ax.set_ylabel("Estimated resale value (Percentage of original price)")
+    ax.legend(title="Model")
+    ax.grid(alpha=0.3)
+
+    fig.tight_layout()
+    plt.show()
+
 comparisons = purchase(car_dataset,ev_dataset)
 plot_purchase_comparison(comparisons)
+
+plot_driving_comparison(car_dataset, ev_dataset)
+
+plot_resale_comparison(car_dataset)
