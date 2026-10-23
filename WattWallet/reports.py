@@ -66,16 +66,13 @@ def purchase(car_dataset, ev_dataset):
         (cleaned_ev_dataset["model"].isin(["EQE", "EQS"])) & 
         (cleaned_ev_dataset["year"].isin([2024]))
         ]
-    sclass_cclass_comparision = cleaned_car_dataset[
+    sclass_eclass_comparision = cleaned_car_dataset[
         (cleaned_car_dataset["make"].isin(["Mercedes-Benz"])) & 
-        (cleaned_car_dataset["model"].isin(["C-Class", "S-Class"])) & 
+        (cleaned_car_dataset["model"].isin(["C-Class", "E-Class"])) & 
         (cleaned_car_dataset["model_year"].isin([2024]))
         ]
-    print(eqe_eqs_value_comparsion)
-    print(sclass_cclass_comparision)
     return None
 
-purchase(car_dataset, ev_dataset)
 # stage 2: Vlaue (A)
 def value():
     """Explore how much extra range or performance you receive as your budget increases."""
@@ -83,11 +80,23 @@ def value():
     return None
 
 # stage 3: Driving (K)
-def driving():
+def driving(car_dataset, ev_dataset):
     """Estimate the driving distance needed for energy savings to recover the EV’s upfront premium."""
+    FUEL_COST = 1.73
+    ELECTRICTY_COST = 0.166
+    ev_dataset = ev_dataset[["brand", "model", "year","price_usd"]]
+    car_dataset = car_dataset[["make", "model","model_year", "original_price", "fuel_consumption_combined_l_100km"]]
+    car_dataset = car_dataset[(car_dataset["make"].isin(["Mercedes-Benz"])) &
+                              car_dataset["model"].isin(["E-Class"]) &
+                              car_dataset["model_year"].isin([2024])]
+    ev_dataset = ev_dataset[(ev_dataset["brand"].isin(["Mercedes"])) &
+                            ev_dataset["model"].isin(["EQE"]) & 
+                            ev_dataset["year"].isin([2024])]
+    break_even_distance = ((ev_dataset["price_usd"]) - (car_dataset["original_price"]).mean()) / (FUEL_COST - ELECTRICTY_COST)
 
+    print(break_even_distance)
     return None
-
+driving(car_dataset, ev_dataset)
 # stage 4: Convenience (A)
 def convenience():
     """Compare trip spending and travel time, including charging stops and detours."""
