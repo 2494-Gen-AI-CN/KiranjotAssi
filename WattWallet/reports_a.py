@@ -1,99 +1,73 @@
-"""Dataset-only reports for stages 2, 4 and 6."""
-import re
+"""Dataset reports for stages 2, 4 and 6. No text or header cleaning."""
 import numpy as np
 import pandas as pd
 from dataset import get_car_dataset_file_path, get_ev_market_dataset_file_path
 
+
 def load_data():
-    """Read through dataset.py; clean names and text cells."""
-    frames = []
-    for path in (get_car_dataset_file_path(), get_ev_market_dataset_file_path()):
-        df = pd.read_csv(path)
-        df.columns = [clean_column_name(c) for c in df.columns]
-        for column in df.select_dtypes(include=["object", "string"]):
-            df[column] = df[column].map(_clean_cell, na_action="ignore")
-        frames.append(df)
-    return tuple(frames)
+    """Read both CSVs as supplied, without modifying their text or headers."""
+    cars = pd.read_csv(get_car_dataset_file_path())
+    evs = pd.read_csv(get_ev_market_dataset_file_path())
+    return cars, evs
 
 
-def _clean_cell(value):
-    """Remove pasted formatting and decode numeric character references."""
-    value = str(value)
-    def replace_reference(match):
-        token = match.group(1)
-        number = int(token[1:], 16) if token.lower().startswith("x") else int(token)
-        return chr(number)
-    value = re.sub(r"&#(x[0-9a-f]+|[0-9]+);", replace_reference, value, flags=re.I)
-    return re.sub(r"\*+", "", value).strip()
+def _prepare_cars(cars, country=None, body_type=None):
+    """Select recognized battery EVs and non-hybrid conventional cars."""
+    vehicles = cars.dropna(subset=[
+        "country", "body_type", "fuel_type", "ev_flag", "hybrid_flag",
+    ]).copy()
 
-
-def clean_column_name(column):
-    """Convert spaces/punctuation to underscores and remove pasted formatting."""
-    name = _clean_cell(str(column)).lower()
-    name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
-    return name
-
-
-def _number(df, column):
-    """Invalid, missing or infinite numeric cells become NaN."""
-    values = df[column].astype(str).str.replace(",", "", regex=False)
-    return pd.to_numeric(values, errors="coerce").replace([np.inf, -np.inf], np.nan)
-
-
-def _text(series):
-    return series.fillna("").astype(str).str.strip().str.lower()
-
-
-def _powertrains(cars):
-    """Return BEV and non-hybrid ICE masks; unknown fuel labels are excluded."""
-    truthy = ["true", "1", "1.0", "yes", "y"]
-    fuel = _text(cars["fuel_type"])
-    hybrid = (
-        _text(cars["hybrid_flag"]).isin(truthy)
-        | fuel.str.contains("hybrid")
-        | _text(cars["hybrid_type"]).isin(
-            ["hev", "phev", "mhev", "plug-in hybrid", "mild hybrid"]
-        )
+    non_hybrid = vehicles["hybrid_flag"] == 0
+    ev_mask = (vehicles["ev_flag"] == 1) & non_hybrid
+    car_mask = (
+        (vehicles["ev_flag"] == 0)
+        & non_hybrid
+        & vehicles["fuel_type"].isin(["Petrol", "Gasoline", "Diesel", "Gas", "CNG", "LPG"])
     )
-    ev = (
-        _text(cars["ev_flag"]).isin(truthy)
-        | fuel.isin(["electric", "electricity", "bev", "battery electric"])
-    ) & ~hybrid
-    ice = fuel.isin(["gasoline", "petrol", "diesel", "gas", "cng", "lpg"])
-    return ev, ice & ~hybrid & ~ev
+    vehicles["powertrain"] = np.select(
+        [ev_mask, car_mask], ["EV", "Conventional"], default="Other"
+    )
+    vehicles = vehicles[vehicles["powertrain"] != "Other"].copy()
 
+    if country is not None:
+        vehicles = vehicles[vehicles["country"] == country].copy()
+    if body_type is not None:
+        vehicles = vehicles[vehicles["body_type"] == body_type].copy()
+    return vehicles
+
+
+def _range_data(vehicles):
+    evs = vehicles[vehicles["powertrain"] == "EV"].copy()
+    evs["range_km"] = evs["electric_range_km"]
+    evs = evs.dropna(subset=["range_km"])
+    evs = evs[evs["range_km"] > 0].copy()
+
+    cars = vehicles[vehicles["powertrain"] == "Conventional"].copy()
+    cars = cars.dropna(subset=[
+        "fuel_tank_capacity_l", "fuel_consumption_highway_l_100km",
+    ])
+    cars = cars[
+        (cars["fuel_tank_capacity_l"] > 0)
+        & (cars["fuel_consumption_highway_l_100km"] > 0)
+    ].copy()
+    cars["range_km"] = (
+        cars["fuel_tank_capacity_l"]
+        / cars["fuel_consumption_highway_l_100km"] * 100
+    )
+    return pd.concat([evs, cars]).sort_index()
+
+
+# Stage 2: Value Check
 
 def value(cars, *, price_band=50000, country=None, body_type=None,
           new_used_status=None, min_model_year=None, max_model_year=None):
-    """Compare median nominal range by current-price band using the cars CSV."""
-
+    """Compare median range within current-price bands shared by both groups."""
     vehicles = _prepare_cars(cars, country, body_type)
 
-    if new_used_status is not None:
-        status = _text(vehicles["new_used_status"])
-        vehicles = vehicles[status == new_used_status.strip().lower()].copy()
-    if min_model_year is not None:
-        vehicles = vehicles[_number(vehicles, "model_year") >= min_model_year].copy()
-    if max_model_year is not None:
-        vehicles = vehicles[_number(vehicles, "model_year") <= max_model_year].copy()
-
-    vehicles["comparison_price"] = _number(vehicles, "current_market_price")
-    vehicles["range_km"] = np.nan
-    ev_mask = vehicles["powertrain"] == "EV"
-    car_mask = vehicles["powertrain"] == "Conventional"
-
-    vehicles.loc[ev_mask, "range_km"] = _number(
-        vehicles.loc[ev_mask], "electric_range_km"
-    )
-    tank = _number(vehicles.loc[car_mask], "fuel_tank_capacity_l")
-    consumption = _number(vehicles.loc[car_mask], "fuel_consumption_highway_l_100km")
-    tank = tank.where(tank > 0)
-    consumption = consumption.where(consumption > 0)
-    vehicles.loc[car_mask, "range_km"] = tank / consumption * 100
-
-    vehicles = vehicles[
-        (vehicles["comparison_price"] > 0) & (vehicles["range_km"] > 0)
-    ].copy()
+    vehicles["comparison_price"] = vehicles["current_market_price"]
+    vehicles = vehicles.dropna(subset=["comparison_price"])
+    vehicles = vehicles[vehicles["comparison_price"] > 0].copy()
+    vehicles = _range_data(vehicles)
     vehicles["price_band_start"] = (
         np.floor(vehicles["comparison_price"] / price_band) * price_band
     )
@@ -103,18 +77,15 @@ def value(cars, *, price_band=50000, country=None, body_type=None,
         median_range=("range_km", "median"),
         observations=("range_km", "size"),
     )
-
     comparison = summary.pivot(
         index="price_band_start", columns="powertrain", values="median_range"
     )
     comparison = comparison.reindex(columns=["EV", "Conventional"])
     comparison = comparison.dropna(subset=["EV", "Conventional"])
-
     counts = summary.pivot(
         index="price_band_start", columns="powertrain", values="observations"
     )
     counts = counts.reindex(index=comparison.index, columns=["EV", "Conventional"])
-
     return {
         "vehicles": vehicles,
         "range_comparison": comparison,
@@ -123,59 +94,74 @@ def value(cars, *, price_band=50000, country=None, body_type=None,
     }
 
 
-def _prepare_cars(cars, country=None, body_type=None):
-    """Keep recognized battery EVs and conventional non-hybrid vehicles."""
-    ev, ice = _powertrains(cars)
-    df = cars.copy()
-    df['powertrain'] = np.select([ev, ice], ['EV', 'Conventional'], default='Other')
-    df = df.loc[df['powertrain'].ne('Other')].copy()
-    if country is not None:
-        df = df[_text(df["country"]) == country.strip().lower()].copy()
-    if body_type is not None:
-        df = df[_text(df["body_type"]) == body_type.strip().lower()].copy()
-    return df
-
+# Stage 4: Convenience
 
 def convenience(cars, *, country=None, body_type=None):
-    """Stage 4: recorded range and charging durations; no trip assumptions."""
+    """Compare nominal ranges and recorded charging durations, not trip delays. """
+    vehicles = _prepare_cars(cars, country, body_type)
+    vehicles = _range_data(vehicles)
+    evs = vehicles[vehicles["powertrain"] == "EV"].copy()
+    conventional = vehicles[vehicles["powertrain"] == "Conventional"].copy()
 
-    df = _prepare_cars(cars, country, body_type)
-    ev_mask = df['powertrain'].eq('EV')
-    electric_range = _number(df, 'electric_range_km').where(lambda s: s > 0)
-    tank = _number(df, 'fuel_tank_capacity_l').where(lambda s: s > 0)
-    consumption = _number(df, 'fuel_consumption_highway_l_100km').where(lambda s: s > 0)
+    evs = evs.dropna(subset=["vehicle_id", "make", "model", "fast_charging_support"])
+    evs["ac_minutes"] = evs["ac_charging_time_hours"] * 60
+    evs["dc_minutes"] = evs["dc_fast_charge_time_minutes"]
+    evs = evs.dropna(subset=["ac_minutes"])
+    evs = evs[evs["ac_minutes"] > 0].copy()
 
-    df['range_km'] = np.where(ev_mask, electric_range, tank / consumption * 100)
-    range_rows = df.loc[df['range_km'].gt(0)].copy()
-    range_summary = range_rows.groupby(['body_type', 'powertrain'], as_index=False).agg(
-        median_range_km=('range_km', 'median'), observations=('range_km', 'count')
+    # The supplied sample mixes 0/1 with the literal text "False".
+    evs["fast_charging_support"] = evs["fast_charging_support"].replace(
+        {"False": 0, "True": 1}
     )
+    evs["fast_charging_support"] = pd.to_numeric(
+        evs["fast_charging_support"], errors="coerce"
+    )
+    evs = evs.dropna(subset=["fast_charging_support"])
+    supported = evs["fast_charging_support"] == 1
+    not_supported = evs["fast_charging_support"] == 0
+    # Missing DC time excludes a supported EV's entire row. DC is not required
+    # for EVs whose flag explicitly says fast charging is unsupported.
+    evs = evs[not_supported | (supported & (evs["dc_minutes"] > 0))].copy()
+    supported = evs["fast_charging_support"] == 1
+    evs.loc[~supported, "dc_minutes"] = np.nan
 
-    evs = df.loc[ev_mask].copy()
-    evs['ac_minutes'] = _number(evs, 'ac_charging_time_hours').where(lambda s: s > 0) * 60
-    supported = _text(evs['fast_charging_support']).isin(['true', '1', '1.0', 'yes', 'y'])
-    evs['dc_minutes'] = _number(evs, 'dc_fast_charge_time_minutes').where(lambda s: s > 0).where(supported)
-    
+    complete = pd.concat([evs, conventional]).sort_index()
+    range_summary = complete.groupby(
+        ["body_type", "powertrain"], as_index=False
+    ).agg(
+        median_range_km=("range_km", "median"),
+        observations=("range_km", "count"),
+    )
     durations = evs.melt(
-        id_vars=['vehicle_id', 'make', 'model', 'body_type'],
-        value_vars=['ac_minutes', 'dc_minutes'],
-        var_name='charging_mode', value_name='reported_minutes',
-    ).dropna(subset=['reported_minutes'])
-    
-    charging_summary = durations.groupby(['body_type', 'charging_mode'], as_index=False).agg(
-        median_minutes=('reported_minutes', 'median'), observations=('reported_minutes', 'count')
+        id_vars=["vehicle_id", "make", "model", "body_type"],
+        value_vars=["ac_minutes", "dc_minutes"],
+        var_name="charging_mode", value_name="reported_minutes",
     )
+    durations = durations.dropna(subset=["reported_minutes"])
+    charging_summary = durations.groupby(
+        ["body_type", "charging_mode"], as_index=False
+    ).agg(
+        median_minutes=("reported_minutes", "median"),
+        observations=("reported_minutes", "count"),
+    )
+    return {
+        "vehicles": complete,
+        "range_summary": range_summary,
+        "charging_observations": durations,
+        "charging_summary": charging_summary,
+    }
 
-    return {'vehicles': df, 'range_summary': range_summary,
-            'charging_observations': durations, 'charging_summary': charging_summary}
 
+# Stage 6: Ownership Value
 
 def ownership_verdict(cars, *, country=None, body_type=None):
-    """Stage 6: median observed valuations, not future ownership costs."""
+    """Compare recorded valuations, not future resale or total ownership cost."""
     vehicles = _prepare_cars(cars, country, body_type)
-    vehicles["original_price"] = _number(vehicles, "original_price")
-    vehicles["current_market_price"] = _number(vehicles, "current_market_price")
-    vehicles["age_years"] = _number(vehicles, "vehicle_age")
+    vehicles = vehicles.dropna(subset=["vehicle_id"])
+    vehicles["age_years"] = vehicles["vehicle_age"]
+    vehicles = vehicles.dropna(subset=[
+        "original_price", "current_market_price", "age_years",
+    ])
     vehicles = vehicles[
         (vehicles["original_price"] > 0)
         & (vehicles["current_market_price"] > 0)
@@ -186,7 +172,6 @@ def ownership_verdict(cars, *, country=None, body_type=None):
     vehicles["retained_percent"] = (
         vehicles["current_market_price"] / vehicles["original_price"] * 100
     )
-
     age_summary = vehicles.groupby(
         ["age_band", "powertrain"], as_index=False
     ).agg(
@@ -198,8 +183,6 @@ def ownership_verdict(cars, *, country=None, body_type=None):
     )
     age_comparison = age_comparison.reindex(columns=["EV", "Conventional"])
     age_comparison = age_comparison.dropna(subset=["EV", "Conventional"])
-
-    # Use the same shared-age observation population for the price panel.
     compared = vehicles[vehicles["age_band"].isin(age_comparison.index)].copy()
     price_comparison = compared.groupby("powertrain").agg(
         median_original_price=("original_price", "median"),
@@ -210,7 +193,6 @@ def ownership_verdict(cars, *, country=None, body_type=None):
     price_comparison = price_comparison.dropna(
         subset=["median_original_price", "median_current_price"]
     )
-
     return {
         "vehicles": vehicles,
         "compared_vehicles": compared,
