@@ -108,23 +108,47 @@ WHERE Artist.Name = 'Iron Maiden'
 ORDER BY Album.AlbumId, Track.TrackId;
 
 -- Q15. Every Jazz track: track name, album title and media type name, sorted by album then track.
-
+SELECT Track.Name, Album.Title, MediaType.Name
+FROM Track
+JOIN Album ON Album.AlbumId = Track.AlbumId
+JOIN MediaType ON Track.MediaTypeId = MediaType.MediaTypeId
+JOIN Genre ON Track.GenreId = Genre.GenreId
+WHERE Genre.Name = 'Jazz'
+ORDER BY Album.AlbumId, Track.TrackId;
 
 -- Q16. Each customer with the employee who supports them: customer full name and rep full
 --      name (one column each), sorted by rep then customer.
-
+SELECT CONCAT(Customer.FirstName, ' ', Customer.LastName) as CustomerFullName, 
+        CONCAT(Employee.FirstName, ' ', Employee.LastName) as EmployeeFullName
+FROM Customer
+JOIN Employee ON Customer.SupportRepId = Employee.EmployeeId
+ORDER BY Customer.SupportRepId, CustomerFullName;
 
 -- Q17. Every employee and how many customers they support, including the employees who
 --      support nobody (they show 0), most customers first, then last name.
-
+SELECT CONCAT(Employee.FirstName, ' ', Employee.LastName) as EmployeeFullName,
+        COUNT(Customer.CustomerId) as CustomerCount
+FROM Employee
+LEFT JOIN Customer ON Customer.SupportRepId = Employee.EmployeeId
+GROUP BY Employee.EmployeeId, Employee.FirstName, Employee.LastName
+ORDER By CustomerCount DESC, Employee.LastName;
 
 -- Q18. The five genres that earned the most: genre name and revenue (the sum of unit price
 --      times quantity over every invoice line, two decimals), highest first.
-
+SELECT Genre.Name, ROUND(SUM(InvoiceLine.UnitPrice * InvoiceLine.Quantity), 2) AS Revenue
+FROM Genre
+JOIN Track ON Track.GenreId = Genre.GenreId
+Join InvoiceLine ON InvoiceLine.TrackId = Track.TrackId 
+GROUP BY Genre.GenreId, Genre.Name
+ORDER BY Revenue DESC
+LIMIT 5;
 
 -- Q19. How many tracks have never been sold? One number, found with a LEFT JOIN
 --      from Track to InvoiceLine and a test for NULL.
-
+SELECT COUNT(Track.TrackId) AS NotSold FROM Track
+LEFT JOIN InvoiceLine
+ON InvoiceLine.TrackId=Track.TrackId
+WHERE InvoiceLine.Quantity IS NULL;
 
 -- ============================================================
 -- Part D: subqueries
@@ -132,25 +156,64 @@ ORDER BY Album.AlbumId, Track.TrackId;
 
 -- Q20. Every track on the album called Let There Be Rock: name and length in milliseconds,
 --      in track order (by TrackId). Use a subquery for the album id, not a join.
+SELECT TrackId, Name, Milliseconds
+FROM Track
+WHERE AlbumId = (
+    SELECT AlbumId
+    FROM Album
+    WHERE Title = 'Let There Be Rock'
+)
+ORDER BY TrackId;
 
 
 -- Q21. Tracks that cost more than the average track price: name and unit price,
 --      the first ten alphabetically.
+SELECT Name, UnitPrice FROM Track
+WHERE UnitPrice > (SELECT AVG(UnitPrice) FROM Track)
+ORDER BY Name DESC
+LIMIT 10;
 
 
 -- Q22. Artists with no album at all, A to Z. Write it with NOT IN and a subquery.
 
+SELECT Artist.Name
+FROM Artist
+WHERE Artist.ArtistId NOT IN (
+    SELECT Album.ArtistId
+    FROM Album
+)
+ORDER BY Artist.Name ASC;
+
 
 -- Q22b. Same question, written as a LEFT JOIN. Same rows?
-
+SELECT Artist.Name
+FROM Artist
+LEFT JOIN Album ON Album.ArtistId=Artist.ArtistId
+WHERE Album.ArtistId IS NULL
+ORDER BY Artist.Name ASC;
 
 -- Q23. The invoice with the highest total: invoice id, customer id, date and total.
-
+SELECT InvoiceId, CustomerId, InvoiceDate, Total
+FROM Invoice
+WHERE total = (
+    SELECT MAX(Total)
+    FROM Invoice
+)
 
 -- Q24. Customers who bought at least one Metal track: full name and country, sorted by
 --      name. The list of customer ids comes from a subquery that joins Invoice,
 --      InvoiceLine, Track and Genre.
-
+SELECT CONCAT(Customer.FirstName, ' ', Customer.LastName) as CustomerFullName, Country
+FROM Customer
+WHERE Customer.CustomerId IN (
+    SELECT Invoice.CustomerId
+    FROM Invoice
+    JOIN InvoiceLine ON Invoice.InvoiceId=InvoiceLine.InvoiceId
+    JOIN Track ON Track.TrackId=InvoiceLine.TrackId
+    JOIN Genre ON Genre.GenreId=Track.GenreId
+    WHERE Genre.Name = 'Metal'
+)
+ORDER BY CustomerFullName;
 
 -- ============================================================
 -- Stretch (for home, or if you finish early)
