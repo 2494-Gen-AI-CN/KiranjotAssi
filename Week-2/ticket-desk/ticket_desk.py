@@ -2,11 +2,12 @@
 import logging
 from datetime import timedelta
 from desk import NOW, Desk, Ticket, redact, ticket_refs
-from storage import append_line, export_board, load_desk, save_desk
+from storage import append_line, export_board, load_desk, save_desk, load_desk_db
 from stats import summary
 from report import status_counts
 from frame import load_frame
 from chart import status_chart
+from db import connect
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,9 @@ def main():
     
     # Using our JSON file
     try:
-        desk = load_desk(DATA)
+        # desk = load_desk(DATA)
+        conn = connect()
+        desk = load_desk_db(conn)
     except ValueError:
         log.error("Failed to read tickets.json")
         desk = Desk()
@@ -27,21 +30,21 @@ def main():
     
     # If my desk is empty (file didn't exist, or contained no tickets)
     # then use my old code to seed the desk
-    if len(desk) == 0:
-        t1 = Ticket(1, "Login page returns 500", "high", NOW - timedelta(hours=30))
-        t2 = Ticket(2, "Invoice PDF is blank", "normal", NOW - timedelta(hours=50))
-        t3 = Ticket(3, "Typo on pricing page", "normal", NOW - timedelta(hours=20))
-        t4 = Ticket(4, "Checkout button frozen", "high", NOW - timedelta(hours=6))
-        t5 = Ticket(5, "Export is missing rows", "normal", NOW - timedelta(hours=26))
-        t6 = Ticket(6, "Add dark mode", "low", NOW - timedelta(hours=2))
+    # if len(desk) == 0:
+    #     t1 = Ticket(1, "Login page returns 500", "high", NOW - timedelta(hours=30))
+    #     t2 = Ticket(2, "Invoice PDF is blank", "normal", NOW - timedelta(hours=50))
+    #     t3 = Ticket(3, "Typo on pricing page", "normal", NOW - timedelta(hours=20))
+    #     t4 = Ticket(4, "Checkout button frozen", "high", NOW - timedelta(hours=6))
+    #     t5 = Ticket(5, "Export is missing rows", "normal", NOW - timedelta(hours=26))
+    #     t6 = Ticket(6, "Add dark mode", "low", NOW - timedelta(hours=2))
 
-        for t in [t1, t2, t3, t4, t5, t6]:
-            desk.add(t)
-        t1.close(t1.opened_at + timedelta(hours=3))
-        t2.close(t2.opened_at + timedelta(hours=30))
-        t3.close(t3.opened_at + timedelta(hours=10))
-        t4.assign("Priya")
-        t5.assign("Marco")
+    #     for t in [t1, t2, t3, t4, t5, t6]:
+    #         desk.add(t)
+    #     t1.close(t1.opened_at + timedelta(hours=3))
+    #     t2.close(t2.opened_at + timedelta(hours=30))
+    #     t3.close(t3.opened_at + timedelta(hours=10))
+    #     t4.assign("Priya")
+    #     t5.assign("Marco")
     
     # In python this is the syntax for handling exceptions: try-except
     try:
@@ -86,6 +89,8 @@ def main():
     # delete_file("board.txt")
     
     save_desk(desk, DATA)
+
+    conn.close()
 
     print(summary(desk))
     
