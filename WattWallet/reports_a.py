@@ -10,8 +10,9 @@ def load_data():
     evs = pd.read_csv(get_ev_market_dataset_file_path())
     return cars, evs
 
-
-def _prepare_cars(cars, country=None, body_type=None):
+# Input: cars data and body type
+# output: EV and Conventional cars dataframe
+def _prepare_cars(cars, body_type=None):
     """Select recognized battery EVs and non-hybrid conventional cars."""
     vehicles = cars.dropna(subset=[
         "country", "body_type", "fuel_type", "ev_flag", "hybrid_flag",
@@ -19,6 +20,7 @@ def _prepare_cars(cars, country=None, body_type=None):
 
     non_hybrid = vehicles["hybrid_flag"] == 0
     ev_mask = (vehicles["ev_flag"] == 1) & non_hybrid
+    # identify conventional vehicles 
     car_mask = (
         (vehicles["ev_flag"] == 0)
         & non_hybrid
@@ -27,21 +29,24 @@ def _prepare_cars(cars, country=None, body_type=None):
     vehicles["powertrain"] = np.select(
         [ev_mask, car_mask], ["EV", "Conventional"], default="Other"
     )
+    # keep only EVs and CV cars
     vehicles = vehicles[vehicles["powertrain"] != "Other"].copy()
 
-    if country is not None:
-        vehicles = vehicles[vehicles["country"] == country].copy()
     if body_type is not None:
         vehicles = vehicles[vehicles["body_type"] == body_type].copy()
     return vehicles
 
-
+# find comaprable ranges 
+# INPUT: prepared dataframe containing powertrain
+# output:  range of each powertrain dataframe
 def _range_data(vehicles):
+    # fetch EV range
     evs = vehicles[vehicles["powertrain"] == "EV"].copy()
     evs["range_km"] = evs["electric_range_km"]
-    evs = evs.dropna(subset=["range_km"])
+    evs = evs.dropna(subset=["range_km"]) 
     evs = evs[evs["range_km"] > 0].copy()
 
+    #fetch Conventional car range
     cars = vehicles[vehicles["powertrain"] == "Conventional"].copy()
     cars = cars.dropna(subset=[
         "fuel_tank_capacity_l", "fuel_consumption_highway_l_100km",
@@ -50,6 +55,8 @@ def _range_data(vehicles):
         (cars["fuel_tank_capacity_l"] > 0)
         & (cars["fuel_consumption_highway_l_100km"] > 0)
     ].copy()
+
+    # calculate range based on tank capacity and consumption of fuel 
     cars["range_km"] = (
         cars["fuel_tank_capacity_l"]
         / cars["fuel_consumption_highway_l_100km"] * 100
@@ -58,16 +65,19 @@ def _range_data(vehicles):
 
 
 # Stage 2: Value Check
+# input: cars, price band, body type
+# output: dictioanry containing tables
 
-def value(cars, *, price_band=50000, country=None, body_type=None,
-          new_used_status=None, min_model_year=None, max_model_year=None):
+def value(cars, *, price_band=50000, body_type=None):
     """Compare median range within current-price bands shared by both groups."""
-    vehicles = _prepare_cars(cars, country, body_type)
+    vehicles = _prepare_cars(cars, body_type)
 
     vehicles["comparison_price"] = vehicles["current_market_price"]
     vehicles = vehicles.dropna(subset=["comparison_price"])
     vehicles = vehicles[vehicles["comparison_price"] > 0].copy()
+
     vehicles = _range_data(vehicles)
+    # assign each vehicle to a price category (50k, 150k, etc)
     vehicles["price_band_start"] = (
         np.floor(vehicles["comparison_price"] / price_band) * price_band
     )
@@ -86,6 +96,7 @@ def value(cars, *, price_band=50000, country=None, body_type=None,
         index="price_band_start", columns="powertrain", values="observations"
     )
     counts = counts.reindex(index=comparison.index, columns=["EV", "Conventional"])
+    # set the shape of each
     return {
         "vehicles": vehicles,
         "range_comparison": comparison,
@@ -95,10 +106,11 @@ def value(cars, *, price_band=50000, country=None, body_type=None,
 
 
 # Stage 4: Convenience
-
-def convenience(cars, *, country=None, body_type=None):
+# input: cars, body_type
+# output: dictioanry containing tables 
+def convenience(cars, *, body_type=None):
     """Compare nominal ranges and recorded charging durations, not trip delays. """
-    vehicles = _prepare_cars(cars, country, body_type)
+    vehicles = _prepare_cars(cars, body_type)
     vehicles = _range_data(vehicles)
     evs = vehicles[vehicles["powertrain"] == "EV"].copy()
     conventional = vehicles[vehicles["powertrain"] == "Conventional"].copy()
@@ -153,10 +165,11 @@ def convenience(cars, *, country=None, body_type=None):
 
 
 # Stage 6: Ownership Value
-
-def ownership_verdict(cars, *, country=None, body_type=None):
+# input: cars, body type
+# output: dictioanry containing tables
+def ownership_verdict(cars, *, body_type=None):
     """Compare recorded valuations, not future resale or total ownership cost."""
-    vehicles = _prepare_cars(cars, country, body_type)
+    vehicles = _prepare_cars(cars, body_type)
     vehicles = vehicles.dropna(subset=["vehicle_id"])
     vehicles["age_years"] = vehicles["vehicle_age"]
     vehicles = vehicles.dropna(subset=[
