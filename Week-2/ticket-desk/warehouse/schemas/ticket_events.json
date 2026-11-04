@@ -1,0 +1,7 @@
+[
+    {"name": "event_id", "type": "INTEGER"},
+    {"name": "ticket_id", "type": "INTEGER"},
+    {"name": "kind", "type": "STRING"},
+    {"name": "note", "type": "STRING"},
+    {"name": "created_at", "type": "DATETIME"}
+]
