@@ -37,7 +37,10 @@ SELECT
     name, 
     email,
     country,
-    monthly_fee
+    monthly_fee,
+    (SELECT DATE(MIN(opened_at)) FROM desk_raw.tickets) AS effective_from,
+    DATE '9999-12-31' AS effective_to,
+    TRUE as is_current
 FROM desk_raw.customers;
 
 -- one row per priority, will be snowflake schma;s extra table
@@ -79,5 +82,7 @@ FROM desk_raw.ticket_events AS e
 JOIN desk_raw.tickets AS t ON t.ticket_id = e.ticket_id
 JOIN desk_dw.dim_customer AS c ON c.customer_id = t.customer_id
 WHERE e.kind IN ('open', 'assigned', 'closed')
+AND DATE(e.created_at) >= e.effective_from
+AND DATE(e.created_at) <= c.effective_to
 AND e.created_at >= t.opened_at
 QUALIFY ROW_NUMBER() OVER (PARTITION BY e.ticket_id, e.kind, e.created_at ORDER BY  e.event_id) = 1;
