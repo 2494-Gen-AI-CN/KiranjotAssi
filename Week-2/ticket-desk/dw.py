@@ -32,3 +32,24 @@ def load_rows(bq, rows, table, mode="WRITE_TRUNCATE"):
     job = bq.load_table_from_json([jsonable(row) for row in rows], table, job_config=config)
     job.result()
     return job.output_rows
+
+def load_file(bq, path, table, mode="WRITE_TRUNCATE"):
+    """Load a CSV of JSON-Lines into an existing table with its own schema"""
+    config= bigquery.LoadJobConfig(schema=bq.get_table(table).schema, write_disposition=mode)
+    #need to handle bth CSV and JSON-L
+    if str(path).endswith(".csv"):
+        config.source_format = bigquery.SourceFormat.CSV
+        config.skip_leading_rows = 1
+    else:
+        config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
+    with open(path, "rb") as f:
+        job = bq.load_table_from_file(f, table, job_config=config)
+    job.result()
+    return job.output_rows
+
+def load_frame(bq, frame, table, mode="WRITE_TRUNCATE"):
+    """Load a dataframe into an existing table with that table's own schema"""
+    config = bigquery.LoadJobConfig(schema=bq.get_table(table).schema, write_disposition=mode)
+    job = bq.load_table_from_dataframe(frame, table, job_config=config)
+    job.result()
+    return job.output_rows
