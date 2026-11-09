@@ -1,3 +1,14 @@
+# Arena to Boardroom datasets and generated exports
+/ATB_a/data/raw/
+/ATB_a/data/processed/
+
+# Credentials (never commit)
+.env.*
+!.env.example
+*service-account*.json
+*credentials*.json
+*-key.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

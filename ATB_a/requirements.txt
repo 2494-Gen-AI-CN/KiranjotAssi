@@ -1,0 +1,9 @@
+google-cloud-bigquery
+PyYAML
+python-dotenv
+pandas
+pyarrow
+datasets
+matplotlib
+scipy
+pytest

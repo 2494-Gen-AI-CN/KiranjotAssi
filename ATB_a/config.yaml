@@ -1,0 +1,29 @@
+bigquery:
+  project_id: "desk-asthapatel25"
+  location: "US"
+  staging_dataset: "llm_staging"
+  warehouse_dataset: "llm_dw"
+  operations_dataset: "llm_ops"
+
+sources:
+  - path: "data/arena_sample.jsonl"
+    format: "json"
+    staging_table: "stg_battles_test"
+
+  - path: "data/processed/arena_battles.jsonl"
+    format: "json"
+    staging_table: "stg_battles"
+  
+  - path: "data/processed/openrouter_prices_2026-11-08.csv"
+    format: "csv"
+    staging_table: "stg_openrouter"
+
+  - path: "data/raw/leaderboard/text_full.jsonl"
+    format: "json"
+    staging_table: "stg_leaderboard"
+    leaderboard_variant: "text"
+
+  - path: "data/raw/leaderboard/text_style_control_full.jsonl"
+    format: "json"
+    staging_table: "stg_leaderboard"
+    leaderboard_variant: "text_style_control"
