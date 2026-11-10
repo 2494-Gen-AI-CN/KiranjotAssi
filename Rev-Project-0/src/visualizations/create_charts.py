@@ -211,6 +211,10 @@ def plot_price_strength():
           AND strength_elo IS NOT NULL
     """
     df = query_df(sql)
+    top3 = (
+        df[df["matrix_quadrant"].str.startswith("Higher strength, lower price")]
+        .nlargest(3, "strength_elo")
+    )
 
     colors = {
         "Higher strength, lower price — best value": "#2CA02C",
@@ -232,6 +236,28 @@ def plot_price_strength():
             color=color,
             label=label,
         )
+
+    ax.scatter(
+        top3["blended_usd_per_m"],
+        top3["strength_elo"],
+        marker="*",
+        s=240,
+        color="#E4572E",
+        edgecolors="black",
+        linewidths=0.7,
+        zorder=10,
+        label="Top 3 by Arena strength",
+        )
+
+    for _, row in top3.iterrows():
+        ax.annotate(
+            row["model"],
+            (row["blended_usd_per_m"], row["strength_elo"]),
+            xytext=(6, 6),
+            textcoords="offset points",
+            fontsize=8,
+        )
+    
 
     median_price = df["median_price"].iloc[0]
     median_strength = df["median_strength"].iloc[0]
