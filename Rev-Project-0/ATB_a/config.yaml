@@ -27,3 +27,7 @@ sources:
     format: "json"
     staging_table: "stg_leaderboard"
     leaderboard_variant: "text_style_control"
+
+  - path: "data/processed/manual_prices.jsonl"
+    format: "json"
+    staging_table: "stg_manual_prices"
