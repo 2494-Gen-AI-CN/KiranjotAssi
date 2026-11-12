@@ -207,8 +207,6 @@ def main():
 
     budget_chart = draw_chart(results)
     model_chart = build_chart(results)
-    budget_chart.savefig(charts / "02_quality_budget_frontier.png", dpi=200)
-    model_chart.savefig(charts / "01_quality_per_dollar_all_models.png", dpi=180)
     print(f"Saved both quality-per-dollar charts to {charts}")
 
     if args.all_models:

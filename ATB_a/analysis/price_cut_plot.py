@@ -43,7 +43,6 @@ ax.legend(
 charts = analysis / "charts"
 charts.mkdir(exist_ok=True)
 filename = "05_o3_price_cut.png" if actual else "05_price_cut_scenario.png"
-fig.savefig(charts / filename, dpi=200)
 if plt.get_backend().lower() != "agg":
     plt.show()
 plt.close(fig)
