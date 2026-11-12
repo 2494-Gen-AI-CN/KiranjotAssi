@@ -85,7 +85,6 @@ held = results["style_rank_shift"].eq(0).sum()
 
 charts = analysis / "charts"
 charts.mkdir(exist_ok=True)
-fig.savefig(charts / "03_style_effect.png", dpi=200)
 if plt.get_backend().lower() != "agg":
     plt.show()
 plt.close(fig)
