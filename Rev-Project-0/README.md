@@ -181,8 +181,9 @@ Run in this order:
 cd Rev-Project-0
 
 # Git Bash
+# From Rev-Project-0/ATB_a, after activating the environment
+cd ../ATB_k
 export GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID"
-
 python -m src.analysis.calculate_gap
 python -m src.analysis.recalculate_language_gaps
 python -m src.analysis.calculate_prompt_gaps
@@ -241,9 +242,7 @@ DATASET_ID = "llm_arena"
 ---
 
 ## 8. Ingestion: validation, rejects and load log
-The source paths, formats, and BigQuery staging destinations are listed in config.yaml. The Python ingestion jobs validate required fields and types, parse timestamps, apply the documented cleansing rules, and remove duplicates using [deduplication key].  
-
-Valid records load into the configured staging tables. Rejected records are written to [exact rejects table] with a reason for rejection. Each run writes to [exact load-log table], recording the run time, source, rows read, rows loaded, and rows rejected. Dry-run mode validates the sources without loading them. Regular loads replace the configured staging tables the configured staging tables.
+TDuplicate keys, rejects tables, and load-log tables are source-specific, as listed below. Valid records replace the configured staging tables. Rejected records are written with a rejection reason. Each run appends its row counts and status to the appropriate load-log table. Dry-run mode validates the source without loading data.
 
 | Source | Duplicate key | Rejects table | Load-log table | Staging load behavior |
 |---|---|---|---|---|
@@ -251,13 +250,6 @@ Valid records load into the configured staging tables. Rejected records are writ
 | OpenRouter snapshots | `(model_id, snapshot_date)` | `llm_ops.openrouter_rejects` | `llm_ops.openrouter_load_log` | Replaces staging data (`WRITE_TRUNCATE`) |
 | Leaderboard | `(leaderboard_variant, category, leaderboard_publish_date, model_name)` | `llm_ops.leaderboard_rejects` | `llm_ops.leaderboard_load_log` | Replaces staging data (`WRITE_TRUNCATE`) |
 | Manual prices | `arena_name` | `llm_ops.manual_prices_rejects` | `llm_ops.manual_prices_load_log` | Replaces staging data (`WRITE_TRUNCATE`) |
-
-
-The load-log tables are:
-- llm_ops.arena_load_log
-- llm_ops.openrouter_load_log
-- llm_ops.leaderboard_load_log
-- llm_ops.manual_prices_load_log
 
 ## 9. Warehouse design
 
