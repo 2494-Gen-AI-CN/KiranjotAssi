@@ -117,3 +117,4 @@ plot_purchase_comparison(comparisons)
 plot_driving_comparison(car_dataset, ev_dataset)
 
 plot_resale_comparison(car_dataset)
+

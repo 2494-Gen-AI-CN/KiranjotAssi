@@ -6,53 +6,35 @@ EV_COLOR = "#F791A9"
 CAR_COLOR = "#037F71"
 
 # Optional filters. None means include all available rows.
-COUNTRY = None
 BODY_TYPE = None
 PRICE_BAND = 50000  # Same units as current_market_price; verify the currency.
-NEW_USED_STATUS = None  # For example "Used" or "New".
-MIN_MODEL_YEAR = None
-MAX_MODEL_YEAR = None
 
 
 # Stage 2: Value Check
 
 def plot_value(results):
-    """Plot EV and conventional median range within shared current-price bands."""
+    """Compare median range across price bands."""
     comparison = results["range_comparison"]
     band_width = results["price_band"]
     fig, ax = plt.subplots(figsize=(11, 6))
 
-    positions = list(range(len(comparison)))
-    ev_positions = []
-    car_positions = []
     labels = []
-    for position, start in zip(positions, comparison.index):
-        ev_positions.append(position - 0.2)
-        car_positions.append(position + 0.2)
-        end = start + band_width
-        labels.append(f"{start:,.0f}–{end:,.0f}")
+    for start in comparison.index:
+        labels.append(f"{start:,.0f}–{start + band_width:,.0f}")
 
-    ax.bar(
-        ev_positions, comparison["EV"], width=0.4,
-        color=EV_COLOR, label="EV",
+    comparison.plot.bar(
+        ax=ax, color=[EV_COLOR, CAR_COLOR], width=0.8, rot=25,
     )
-    ax.bar(
-        car_positions, comparison["Conventional"], width=0.4,
-        color=CAR_COLOR, label="Conventional",
-    )
-
-    ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=25, ha="right")
     ax.set_ylim(0, comparison.max().max() * 1.3)
-    ax.legend()
-
+    ax.legend(title=None)
     ax.set_title("Stage 2: How Much Range Does Your Budget Buy?")
     ax.set_xlabel("Current Market Price Band (USD)")
     ax.set_ylabel("Median Nominal Range (km)")
     ax.grid(axis="y", alpha=0.2)
     ax.set_axisbelow(True)
 
-    fig.tight_layout(rect=(0, 0.10, 1, 1))
+    fig.tight_layout()
     return fig
 
 # Stage 4: Convenience
@@ -103,7 +85,7 @@ def plot_convenience(results):
         ax.set_axisbelow(True)
 
     fig.suptitle("Stage 4: Convenience")
-    fig.tight_layout(rect=(0, 0.10, 1, 0.94))
+    fig.tight_layout()
     return fig
 
 # Stage 6: Ownership Value
@@ -149,7 +131,7 @@ def plot_ownership(results):
         ax.set_axisbelow(True)
 
     fig.suptitle("Stage 6: Ownership Value")
-    fig.tight_layout(rect=(0, 0.10, 1, 0.94))
+    fig.tight_layout()
     return fig
 
 
@@ -159,12 +141,10 @@ def main():
     cars, _ = load_data()
 
     stage2 = value(
-        cars, price_band=PRICE_BAND, country=COUNTRY, body_type=BODY_TYPE,
-        new_used_status=NEW_USED_STATUS,
-        min_model_year=MIN_MODEL_YEAR, max_model_year=MAX_MODEL_YEAR,
+        cars, price_band=PRICE_BAND, body_type=BODY_TYPE,
     )
-    stage4 = convenience(cars, country=COUNTRY, body_type=BODY_TYPE)
-    stage6 = ownership_verdict(cars, country=COUNTRY, body_type=BODY_TYPE)
+    stage4 = convenience(cars, body_type=BODY_TYPE)
+    stage6 = ownership_verdict(cars, body_type=BODY_TYPE)
 
     plot_value(stage2)
     plot_convenience(stage4)
